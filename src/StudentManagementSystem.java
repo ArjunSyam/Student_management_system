@@ -3,10 +3,12 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.sql.*;  
 
+//DBMS connection class
+//done
 class DBMS {
     private static final String URL = "jdbc:mysql://localhost:3306/java_project";
     private static final String USER = "root";
-    private static final String PASSWORD = "password";
+    private static final String PASSWORD = "Batman12";
 
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(URL, USER, PASSWORD);
@@ -14,6 +16,7 @@ class DBMS {
 }
 
 // Base Login Page class
+//done
 abstract class LoginPage extends JFrame {
     protected JTextField usernameField;
     protected JPasswordField passwordField;
@@ -46,6 +49,7 @@ abstract class LoginPage extends JFrame {
 }
 
 // Teacher Login Page
+//done
 class TeacherLoginPage extends LoginPage {
     public TeacherLoginPage() {
         super("Teacher Login");
@@ -56,17 +60,35 @@ class TeacherLoginPage extends LoginPage {
         String username = usernameField.getText();
         String password = new String(passwordField.getPassword());
 
-        // Add database authentication here
-        if ("teacher".equals(username) && "pass".equals(password)) {
-            dispose();
-            new TeacherPortal().setVisible(true);
-        } else {
-            JOptionPane.showMessageDialog(this, "Invalid credentials");
+        try {
+            // Database connection 
+            Connection conn = DBMS.getConnection();
+            //query statment
+            PreparedStatement stmt = conn.prepareStatement("SELECT * FROM teacher WHERE teacher_id = ? and password = ?");
+            stmt.setString(1, username);
+            stmt.setString(2, password);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if(rs.next()) {
+                //successful login
+                System.out.println("Teacher successflly logged in: "+rs.getString("name"));
+
+                dispose();
+                new TeacherPortal().setVisible(true);
+            } else {
+                JOptionPane.showMessageDialog(this, "Invalid credentials");
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Database error");
+            e.printStackTrace();
         }
     }
 }
 
 // Student Login Page
+//done
 class StudentLoginPage extends LoginPage {
     public StudentLoginPage() {
         super("Student Login");
@@ -77,12 +99,29 @@ class StudentLoginPage extends LoginPage {
         String username = usernameField.getText();
         String password = new String(passwordField.getPassword());
 
-        // Add database authentication here
-        if ("student".equals(username) && "pass".equals(password)) {
-            dispose();
-            new StudentPortal(username).setVisible(true);
-        } else {
-            JOptionPane.showMessageDialog(this, "Invalid credentials");
+        try {
+            // Database connection 
+            Connection conn = DBMS.getConnection();
+            //query statment
+            PreparedStatement stmt = conn.prepareStatement("SELECT * FROM student WHERE usn = ? and password = ?");
+            stmt.setString(1, username);
+            stmt.setString(2, password);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if(rs.next()) {
+                //successful login
+                System.out.println("Student successflly logged in: "+rs.getString("name"));
+
+                dispose();
+                new StudentPortal(username).setVisible(true);
+            } else {
+                JOptionPane.showMessageDialog(this, "Invalid credentials");
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Database error");
+            e.printStackTrace();
         }
     }
 }
@@ -266,34 +305,68 @@ class StudentPortal extends JFrame {
     }
 
     private void addPersonalDetails(JPanel panel, String usn) {
-        // Add database query here to get student details
-        String[][] details = {
-            {"USN:", usn},
-            {"Name:", "John Doe"},
-            {"Branch:", "Computer Science"},
-            {"Semester:", "4"},
-            {"Section:", "A"}
-        };
+        try {
+            // Database connection 
+            Connection conn = DBMS.getConnection();
+            //query statment
+            PreparedStatement stmt = conn.prepareStatement("SELECT * FROM student WHERE usn = ?");
+            stmt.setString(1, usn);
 
-        for (String[] detail : details) {
-            panel.add(new JLabel(detail[0]));
-            panel.add(new JLabel(detail[1]));
+            ResultSet rs = stmt.executeQuery();
+            rs.next();
+
+            String[][] details = {
+                {"USN:", rs.getString("usn")},
+                {"Name:", rs.getString("name")},
+                {"Branch:", rs.getString("branch")},
+                {"Semester:", String.valueOf(rs.getInt("semester"))},
+                {"Section:", rs.getString("section")}
+            };
+    
+            for (String[] detail : details) {
+                panel.add(new JLabel(detail[0]));
+                panel.add(new JLabel(detail[1]));
+            }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Database error");
+            e.printStackTrace();
         }
     }
 
     private void addAcademicDetails(JPanel panel, String usn) {
-        // Create table for marks
-        String[] columns = {"Subject", "Marks", "Attendance"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0);
-        JTable table = new JTable(model);
+        try {
+            // Database connection 
+            Connection conn = DBMS.getConnection();
+            //query statment
+            PreparedStatement stmt = conn.prepareStatement("SELECT * FROM student_takes_course s join course c on s.c_id = c.c_id WHERE usn = ?");
+            stmt.setString(1, usn);
 
-        // Add database query here to get marks and attendance
-        // Sample data
-        model.addRow(new Object[]{"Database Management", "85", "90%"});
-        model.addRow(new Object[]{"Operating Systems", "78", "85%"});
-        model.addRow(new Object[]{"Data Structures", "92", "95%"});
+            ResultSet rs = stmt.executeQuery();
 
-        panel.add(new JScrollPane(table));
+            // Create table for marks
+            String[] columns = {"Subject", "CIE 1 (20)","CIE 2 (25)","CIE 3 (25)","Final (30)", "Attendance %","next_exam_date"};
+            DefaultTableModel model = new DefaultTableModel(columns, 0);
+            JTable table = new JTable(model);
+
+            while(rs.next()) {
+                String subject = rs.getString("c_name");
+                String cie1 = rs.getString("CIE1");
+                String cie2 = rs.getString("CIE1");
+                String cie3 = rs.getString("CIE1");
+                String end_sem = rs.getString("end_sem");
+                String attendance = rs.getString("attendance");
+                String next_exam = rs.getString("next_exam_date");
+
+                model.addRow(new Object[]{subject,cie1,cie2,cie3,end_sem,attendance,next_exam});
+            }
+
+            panel.add(new JScrollPane(table));
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Database error");
+            e.printStackTrace();
+        }
     }
 }
 
