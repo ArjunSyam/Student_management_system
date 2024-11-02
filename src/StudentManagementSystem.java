@@ -8,7 +8,7 @@ import java.sql.*;
 class DBMS {
     private static final String URL = "jdbc:mysql://localhost:3306/java_project";
     private static final String USER = "root";
-    private static final String PASSWORD = "Batman12";
+    private static final String PASSWORD = "@rn@v!9oE";
 
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(URL, USER, PASSWORD);
@@ -75,7 +75,7 @@ class TeacherLoginPage extends LoginPage {
                 System.out.println("Teacher successflly logged in: "+rs.getString("name"));
 
                 dispose();
-                new TeacherPortal().setVisible(true);
+                new TeacherPortal(username).setVisible(true);
             } else {
                 JOptionPane.showMessageDialog(this, "Invalid credentials");
             }
@@ -126,91 +126,7 @@ class StudentLoginPage extends LoginPage {
     }
 }
 
-// Teacher Portal
-class TeacherPortal extends JFrame {
-    private JPanel inputPanel;
-    private DefaultTableModel tableModel;
-    private JComboBox<String> semesterBox, sectionBox;
-
-    public TeacherPortal() {
-        super("Teacher Portal");
-        setSize(800, 600);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
-
-        setLayout(new BorderLayout(10, 10));
-        
-        // Action buttons panel
-        JPanel buttonPanel = new JPanel(new GridLayout(3, 1, 5, 5));
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        addActionButtons(buttonPanel);
-        add(buttonPanel, BorderLayout.WEST);
-
-        // Input panel
-        inputPanel = new JPanel(new CardLayout());
-        inputPanel.setBorder(BorderFactory.createTitledBorder("Input Form"));
-        add(inputPanel, BorderLayout.CENTER);
-
-        // Table panel
-        JPanel tablePanel = new JPanel(new BorderLayout(5, 5));
-        tablePanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        setupTablePanel(tablePanel);
-        add(tablePanel, BorderLayout.EAST);
-    }
-
-    private void addActionButtons(JPanel panel) {
-        String[] buttons = {"Add Student", "Update Marks", "Update Attendance"};
-        for (String button : buttons) {
-            JButton btn = new JButton(button);
-            btn.addActionListener(e -> showForm(button));
-            panel.add(btn);
-        }
-    }
-
-    private void setupTablePanel(JPanel panel) {
-        // Filter controls
-        /*JPanel filterPanel = new JPanel(new FlowLayout());
-        semesterBox = new JComboBox<>(new String[]{"1", "2", "3", "4", "5", "6", "7", "8"});
-        sectionBox = new JComboBox<>(new String[]{"A", "B", "C", "D"});
-        JButton viewButton = new JButton("View");
-        viewButton.addActionListener(e -> updateTable());
-
-        filterPanel.add(new JLabel("Semester:"));
-        filterPanel.add(semesterBox);
-        filterPanel.add(new JLabel("Section:"));
-        filterPanel.add(sectionBox);
-        filterPanel.add(viewButton);
-        panel.add(filterPanel, BorderLayout.NORTH); */
-
-        // Table
-        String[] columns = {"USN", "Name", "Section", "Branch", "Semester"};
-        tableModel = new DefaultTableModel(columns, 0);
-        JTable table = new JTable(tableModel);
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
-    }
-
-    private void showForm(String formType) {
-        inputPanel.removeAll();
-        JPanel form = new JPanel(new GridLayout(0, 2, 5, 5));
-        form.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        switch (formType) {
-            case "Add Student":
-                addStudentForm(form);
-                break;
-            case "Update Marks":
-                updateMarksForm(form);
-                break;
-            case "Update Attendance":
-                updateAttendanceForm(form);
-                break;
-        }
-
-        inputPanel.add(form);
-        inputPanel.revalidate();
-        inputPanel.repaint();
-    }
-
+class AdminPortal extends JFrame {
     private void addStudentForm(JPanel form) {
         String[] labels = {"USN:", "Name:", "Section:", "Branch:", "Semester:"};
         JTextField[] fields = new JTextField[labels.length];
@@ -228,15 +144,115 @@ class TeacherPortal extends JFrame {
         });
         form.add(submit);
     }
+}
+
+// Teacher Portal
+class TeacherPortal extends JFrame {
+    private JPanel inputPanel;
+    private DefaultTableModel tableModel;
+    private JComboBox<String> semesterBox, sectionBox;
+    private JLabel teacherNameLabel;
+
+    public TeacherPortal(String teacherId) {
+        super("Teacher Portal");
+        setSize(800, 600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        setLayout(new BorderLayout(10, 10));
+
+        try {
+            Connection conn = DBMS.getConnection();
+            PreparedStatement stmt = conn.prepareStatement("SELECT name FROM teacher WHERE teacher_id = ?");
+            stmt.setString(1, teacherId);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                teacherNameLabel = new JLabel("Welcome, " + rs.getString("name"));
+                teacherNameLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 20));
+                teacherNameLabel.setHorizontalAlignment(JLabel.RIGHT);
+                add(teacherNameLabel, BorderLayout.NORTH);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        // Action buttons panel
+        JPanel buttonPanel = new JPanel(new GridLayout(2, 1, 5, 5));
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        addActionButtons(buttonPanel);
+        add(buttonPanel, BorderLayout.WEST);
+
+        // Input panel
+        inputPanel = new JPanel(new CardLayout());
+        inputPanel.setBorder(BorderFactory.createTitledBorder("Input Form"));
+        add(inputPanel, BorderLayout.CENTER);
+
+        // Table panel
+        JPanel tablePanel = new JPanel(new BorderLayout(5, 5));
+        tablePanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        setupTablePanel(tablePanel);
+        add(tablePanel, BorderLayout.EAST);
+    }
+
+    private void addActionButtons(JPanel panel) {
+        String[] buttons = {"Update Marks", "Update Attendance"};
+        for (String button : buttons) {
+            JButton btn = new JButton(button);
+            btn.addActionListener(e -> showForm(button));
+            panel.add(btn);
+        }
+    }
+
+    private void setupTablePanel(JPanel panel) {
+        // Table
+        String[] columns = {"USN", "Name", "Section", "Branch", "Semester"};
+        tableModel = new DefaultTableModel(columns, 0);
+        JTable table = new JTable(tableModel);
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+    }
+
+    private void showForm(String formType) {
+        inputPanel.removeAll();
+        JPanel form = new JPanel(new GridLayout(0, 2, 5, 5));
+        form.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        switch (formType) {
+            case "Update Marks":
+                updateMarksForm(form);
+                break;
+            case "Update Attendance":
+                updateAttendanceForm(form);
+                break;
+        }
+
+        inputPanel.add(form);
+        inputPanel.revalidate();
+        inputPanel.repaint();
+    }
 
     private void updateMarksForm(JPanel form) {
         form.add(new JLabel("USN:"));
-        JTextField usnField = new JTextField();
-        form.add(usnField);
+        JComboBox<String> usnDropdown = new JComboBox<>();
+        
+        try {
+            Connection conn = DBMS.getConnection();
+            PreparedStatement stmt = conn.prepareStatement("SELECT DISTINCT usn FROM student"); //only same sections as teacher should show
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                usnDropdown.addItem(rs.getString("usn"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        form.add(usnDropdown);
 
-        form.add(new JLabel("Subject:"));
-        JTextField subjectField = new JTextField();
-        form.add(subjectField);
+        // Add exam type dropdown
+        form.add(new JLabel("Exam:"));
+        String[] examTypes = {"CIE1", "CIE2", "CIE3", "SEE"};
+        JComboBox<String> examTypeDropdown = new JComboBox<>(examTypes);
+        form.add(examTypeDropdown);
 
         form.add(new JLabel("Marks:"));
         JTextField marksField = new JTextField();
@@ -252,12 +268,21 @@ class TeacherPortal extends JFrame {
 
     private void updateAttendanceForm(JPanel form) {
         form.add(new JLabel("USN:"));
-        JTextField usnField = new JTextField();
-        form.add(usnField);
-
-        form.add(new JLabel("Subject:"));
-        JTextField subjectField = new JTextField();
-        form.add(subjectField);
+        JComboBox<String> usnDropdown = new JComboBox<>();
+        
+        try {
+            Connection conn = DBMS.getConnection();
+            PreparedStatement stmt = conn.prepareStatement("SELECT DISTINCT usn FROM student");
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                usnDropdown.addItem(rs.getString("usn"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        
+        form.add(usnDropdown);
 
         form.add(new JLabel("Attendance (%):"));
         JTextField attendanceField = new JTextField();
@@ -280,6 +305,7 @@ class TeacherPortal extends JFrame {
 }
 
 // Student Portal
+// done
 class StudentPortal extends JFrame {
     public StudentPortal(String usn) {
         super("Student Portal - " + usn);
