@@ -126,23 +126,254 @@ class StudentLoginPage extends LoginPage {
     }
 }
 
-class AdminPortal extends JFrame {
-    private void addStudentForm(JPanel form) {
-        String[] labels = {"USN:", "Name:", "Section:", "Branch:", "Semester:"};
-        JTextField[] fields = new JTextField[labels.length];
-        
-        for (int i = 0; i < labels.length; i++) {
-            form.add(new JLabel(labels[i]));
-            fields[i] = new JTextField();
-            form.add(fields[i]);
-        }
-
-        JButton submit = new JButton("Add Student");
-        submit.addActionListener(e -> {
-            // Add database connection code here
-            JOptionPane.showMessageDialog(this, "Student Added Successfully");
+interface Logout {
+    default void addLogoutButton(JFrame frame) {
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton logoutButton = new JButton("Logout");
+        logoutButton.addActionListener(e -> {
+            frame.dispose();
+            new StudentManagementSystem().setVisible(true);
         });
-        form.add(submit);
+        topPanel.add(logoutButton);
+        frame.add(topPanel, BorderLayout.SOUTH);
+    }
+}
+
+class AdminLoginPage extends LoginPage {
+    private static final String ADMIN_USERNAME = "admin";
+    private static final String ADMIN_PASSWORD = "password";
+
+    public AdminLoginPage() {
+        super("Admin Login");
+    }
+
+    @Override
+    protected void authenticate() {
+        String username = usernameField.getText();
+        String password = new String(passwordField.getPassword());
+
+        // Check against credentials
+        if (username.equals(ADMIN_USERNAME) && password.equals(ADMIN_PASSWORD)) {
+            System.out.println("Admin successfully logged in");
+            dispose();
+            new AdminPortal().setVisible(true);
+        } else {
+            JOptionPane.showMessageDialog(this, "Invalid credentials");
+        }
+    }
+}
+
+// Admin Portal
+class AdminPortal extends JFrame implements Logout {
+    private JPanel inputPanel;
+    private CardLayout cardLayout;
+
+    public AdminPortal() {
+        super("Admin Portal");
+        setSize(600, 400);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        setLayout(new BorderLayout(10, 10));
+
+        addLogoutButton(this);
+
+        // Button Panel on the left
+        JPanel buttonPanel = new JPanel(new GridLayout(2, 1, 10, 10));
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JButton addTeacherButton = new JButton("Add Teacher");
+        JButton addStudentButton = new JButton("Add Student");
+
+        addTeacherButton.addActionListener(e -> showForm("teacher"));
+        addStudentButton.addActionListener(e -> showForm("student"));
+
+        buttonPanel.add(addTeacherButton);
+        buttonPanel.add(addStudentButton);
+
+        add(buttonPanel, BorderLayout.WEST);
+
+        // Input Panel in the center
+        cardLayout = new CardLayout();
+        inputPanel = new JPanel(cardLayout);
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 20));
+
+        // Create and add forms
+        inputPanel.add(createTeacherForm(), "teacher");
+        inputPanel.add(createStudentForm(), "student");
+
+        add(inputPanel, BorderLayout.CENTER);
+    }
+
+    private JPanel createTeacherForm() {
+        JPanel form = new JPanel(new GridLayout(0, 2, 10, 10));
+        form.setBorder(BorderFactory.createTitledBorder("Add New Teacher"));
+
+        // Teacher ID
+        form.add(new JLabel("Teacher ID:"));
+        JTextField teacherIdField = new JTextField();
+        form.add(teacherIdField);
+
+        // Name
+        form.add(new JLabel("Name:"));
+        JTextField nameField = new JTextField();
+        form.add(nameField);
+
+        // Course
+        form.add(new JLabel("Course:"));
+        JTextField courseField = new JTextField();
+        form.add(courseField);
+
+        // Password
+        form.add(new JLabel("Password:"));
+        JPasswordField passwordField = new JPasswordField();
+        form.add(passwordField);
+
+        // Section
+        form.add(new JLabel("Section:"));
+        JTextField sectionField = new JTextField();
+        form.add(sectionField);
+
+
+        // Submit Button
+        JButton submitButton = new JButton("Add Teacher");
+        submitButton.addActionListener(e -> {
+            // Validate input fields
+            if (teacherIdField.getText().trim().isEmpty() || 
+                nameField.getText().trim().isEmpty() || 
+                passwordField.getPassword().length == 0 || 
+                sectionField.getText().trim().isEmpty() ||
+                courseField.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "All fields are required!");
+                return;
+            }
+
+            try {
+                Connection conn = DBMS.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(
+                    "INSERT INTO teacher (teacher_id, name, password, c_id, password, section) VALUES (?, ?, ?, ?, ?)"
+                );
+                
+                stmt.setString(1, teacherIdField.getText().trim());
+                stmt.setString(2, nameField.getText().trim());
+                stmt.setString(4, courseField.getText().trim());
+                stmt.setString(3, new String(passwordField.getPassword()));
+                stmt.setString(4, sectionField.getText().trim());
+
+                int result = stmt.executeUpdate();
+                if (result > 0) {
+                    JOptionPane.showMessageDialog(this, "Teacher added successfully!");
+                    // Clear fields
+                    teacherIdField.setText("");
+                    nameField.setText("");
+                    courseField.setText("");
+                    passwordField.setText("");
+                    sectionField.setText("");
+                }
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, "Error adding teacher: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
+
+        form.add(new JLabel()); // Empty label for spacing
+        form.add(submitButton);
+
+        return form;
+    }
+
+    private JPanel createStudentForm() {
+        JPanel form = new JPanel(new GridLayout(0, 2, 10, 10));
+        form.setBorder(BorderFactory.createTitledBorder("Add New Student"));
+
+        // USN
+        form.add(new JLabel("USN:"));
+        JTextField usnField = new JTextField();
+        form.add(usnField);
+
+        // Name
+        form.add(new JLabel("Name:"));
+        JTextField nameField = new JTextField();
+        form.add(nameField);
+
+        // Password
+        form.add(new JLabel("Password:"));
+        JPasswordField passwordField = new JPasswordField();
+        form.add(passwordField);
+
+        // Branch
+        form.add(new JLabel("Branch:"));
+        JTextField branchField = new JTextField();
+        form.add(branchField);
+
+        // Semester
+        form.add(new JLabel("Semester:"));
+        JComboBox<String> semesterBox = new JComboBox<>(new String[]{"1", "2", "3", "4", "5", "6", "7", "8"});
+        form.add(semesterBox);
+
+        // Section
+        form.add(new JLabel("Section:"));
+        JComboBox<String> sectionBox = new JComboBox<>(new String[]{"A", "B", "C", "D", "E", "F", "G", "H", "I"});
+        form.add(sectionBox);
+
+        // Year
+        form.add(new JLabel("Year: "));
+        JTextField yearField = new JTextField();
+        form.add(yearField);
+
+        // Submit Button
+        JButton submitButton = new JButton("Add Student");
+        submitButton.addActionListener(e -> {
+            // Validate input fields
+            if (usnField.getText().trim().isEmpty() || 
+                nameField.getText().trim().isEmpty() || 
+                passwordField.getPassword().length == 0 || 
+                branchField.getText().trim().isEmpty() ||
+                yearField.getText().trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "All fields are required!");
+                return;
+            }
+
+            try {
+                Connection conn = DBMS.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(
+                    "INSERT INTO student (usn, name, password, branch, semester, section, year) VALUES (?, ?, ?, ?, ?, ?, ?)"
+                );
+                
+                stmt.setString(1, usnField.getText().trim());
+                stmt.setString(2, nameField.getText().trim());
+                stmt.setString(3, new String(passwordField.getPassword()));
+                stmt.setString(4, branchField.getText().trim());
+                stmt.setString(5, (String) semesterBox.getSelectedItem());
+                stmt.setString(6, (String) sectionBox.getSelectedItem());
+                stmt.setString(4, yearField.getText().trim());
+
+                int result = stmt.executeUpdate();
+                if (result > 0) {
+                    JOptionPane.showMessageDialog(this, "Student added successfully!");
+                    // Clear fields
+                    usnField.setText("");
+                    nameField.setText("");
+                    passwordField.setText("");
+                    branchField.setText("");
+                    semesterBox.setSelectedIndex(0);
+                    sectionBox.setSelectedIndex(0);
+                    yearField.setText("");
+                }
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, "Error adding student: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        });
+
+        form.add(new JLabel()); // Empty label for spacing
+        form.add(submitButton);
+
+        return form;
+    }
+
+    private void showForm(String formType) {
+        cardLayout.show(inputPanel, formType);
     }
 }
 
@@ -381,12 +612,14 @@ class TeacherPortal extends JFrame {
 
 // Student Portal
 // done
-class StudentPortal extends JFrame {
+class StudentPortal extends JFrame implements Logout {
     public StudentPortal(String usn) {
         super("Student Portal - " + usn);
         setSize(600, 400);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
+
+        addLogoutButton(this);
 
         JTabbedPane tabbedPane = new JTabbedPane();
 
