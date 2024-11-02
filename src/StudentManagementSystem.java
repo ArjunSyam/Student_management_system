@@ -378,19 +378,19 @@ class AdminPortal extends JFrame implements Logout {
 }
 
 // Teacher Portal
-class TeacherPortal extends JFrame {
+class TeacherPortal extends JFrame implements Logout {
     private JPanel inputPanel;
     private DefaultTableModel tableModel;
-    private JComboBox<String> semesterBox, sectionBox;
     private JLabel teacherNameLabel;
 
     public TeacherPortal(String teacherId) {
         super("Teacher Portal");
-        setSize(800, 600);
+        setSize(1280, 720);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         setLayout(new BorderLayout(10, 10));
+        addLogoutButton(this);
 
         try {
             Connection conn = DBMS.getConnection();
@@ -407,7 +407,7 @@ class TeacherPortal extends JFrame {
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        
+
         // Action buttons panel
         JPanel buttonPanel = new JPanel(new GridLayout(2, 1, 5, 5));
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -612,7 +612,7 @@ class TeacherPortal extends JFrame {
 
 // Student Portal
 // done
-class StudentPortal extends JFrame implements Logout {
+class StudentPortal extends JFrame implements Logout{
     public StudentPortal(String usn) {
         super("Student Portal - " + usn);
         setSize(600, 400);
@@ -708,12 +708,19 @@ class StudentPortal extends JFrame implements Logout {
 public class StudentManagementSystem extends JFrame {
     public StudentManagementSystem() {
         super("Student Management System");
-        setSize(300, 150);
+        setSize(600, 200);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
         JPanel panel = new JPanel(new GridLayout(1, 2, 10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        // Admin Login Button
+        JButton adminButton = new JButton("Admin Login");
+        adminButton.addActionListener(e -> {
+            dispose();
+            new AdminLoginPage().setVisible(true);
+        });
 
         JButton teacherButton = new JButton("Teacher Login");
         teacherButton.addActionListener(e -> {
@@ -727,6 +734,7 @@ public class StudentManagementSystem extends JFrame {
             new StudentLoginPage().setVisible(true);
         });
 
+        panel.add(adminButton);
         panel.add(teacherButton);
         panel.add(studentButton);
         add(panel);
