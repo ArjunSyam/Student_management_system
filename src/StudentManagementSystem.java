@@ -8,7 +8,7 @@ import java.sql.*;
 class DBMS {
     private static final String URL = "jdbc:mysql://localhost:3306/java_project";
     private static final String USER = "root";
-    private static final String PASSWORD = "@rn@v!9oE";
+    private static final String PASSWORD = "Batman12";
 
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(URL, USER, PASSWORD);
@@ -180,7 +180,7 @@ class TeacherPortal extends JFrame {
         // Action buttons panel
         JPanel buttonPanel = new JPanel(new GridLayout(2, 1, 5, 5));
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        addActionButtons(buttonPanel);
+        addActionButtons(buttonPanel,teacherId);
         add(buttonPanel, BorderLayout.WEST);
 
         // Input panel
@@ -195,11 +195,11 @@ class TeacherPortal extends JFrame {
         add(tablePanel, BorderLayout.EAST);
     }
 
-    private void addActionButtons(JPanel panel) {
+    private void addActionButtons(JPanel panel,String teacherId) {
         String[] buttons = {"Update Marks", "Update Attendance"};
         for (String button : buttons) {
             JButton btn = new JButton(button);
-            btn.addActionListener(e -> showForm(button));
+            btn.addActionListener(e -> showForm(button,teacherId));
             panel.add(btn);
         }
     }
@@ -212,17 +212,17 @@ class TeacherPortal extends JFrame {
         panel.add(new JScrollPane(table), BorderLayout.CENTER);
     }
 
-    private void showForm(String formType) {
+    private void showForm(String formType,String teacherId) {
         inputPanel.removeAll();
         JPanel form = new JPanel(new GridLayout(0, 2, 5, 5));
         form.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         switch (formType) {
             case "Update Marks":
-                updateMarksForm(form);
+                updateMarksForm(form,teacherId);
                 break;
             case "Update Attendance":
-                updateAttendanceForm(form);
+                updateAttendanceForm(form,teacherId);
                 break;
         }
 
@@ -231,13 +231,20 @@ class TeacherPortal extends JFrame {
         inputPanel.repaint();
     }
 
-    private void updateMarksForm(JPanel form) {
+    private void updateMarksForm(JPanel form,String teacherId) {
         form.add(new JLabel("USN:"));
         JComboBox<String> usnDropdown = new JComboBox<>();
         
         try {
             Connection conn = DBMS.getConnection();
-            PreparedStatement stmt = conn.prepareStatement("SELECT DISTINCT usn FROM student"); //only same sections as teacher should show
+
+            PreparedStatement section = conn.prepareStatement("SELECT section FROM teacher where teacher_id = ?");
+            section.setString(1, teacherId);
+            ResultSet rs_sec = section.executeQuery();
+            rs_sec.next();
+
+            PreparedStatement stmt = conn.prepareStatement("SELECT DISTINCT usn FROM student where section = ?");
+            stmt.setString(1, rs_sec.getString("section"));
             ResultSet rs = stmt.executeQuery();
             
             while (rs.next()) {
@@ -250,7 +257,7 @@ class TeacherPortal extends JFrame {
 
         // Add exam type dropdown
         form.add(new JLabel("Exam:"));
-        String[] examTypes = {"CIE1", "CIE2", "CIE3", "SEE"};
+        String[] examTypes = {"CIE1", "CIE2", "CIE3", "END_SEM"};
         JComboBox<String> examTypeDropdown = new JComboBox<>(examTypes);
         form.add(examTypeDropdown);
 
@@ -260,19 +267,59 @@ class TeacherPortal extends JFrame {
 
         JButton submit = new JButton("Update Marks");
         submit.addActionListener(e -> {
-            // Add database connection code here
-            JOptionPane.showMessageDialog(this, "Marks Updated Successfully");
+            try{
+                Connection conn = DBMS.getConnection();
+
+                //get marks
+                double marks = Double.parseDouble(marksField.getText());
+                String usn = (String) usnDropdown.getSelectedItem();
+                String exam = (String) examTypeDropdown.getSelectedItem();
+
+                if ((exam == "CIE1" && marks > 20) || ((exam == "CIE2" || exam == "CIE3") && marks > 25) || (exam == "END_SEM" && marks > 30)) {
+                    JOptionPane.showMessageDialog(null, "Marks are too high");
+                }
+
+                else {
+                    PreparedStatement course = conn.prepareStatement("SELECT c_id FROM teacher where teacher_id = ?");
+                    course.setString(1, teacherId);
+                    ResultSet rs_course = course.executeQuery();
+                    rs_course.next();
+
+                    PreparedStatement stmt_sub = conn.prepareStatement("UPDATE student_takes_course SET " + exam + " = ? where usn = ? and c_id = ?");
+                    stmt_sub.setDouble(1, marks);
+                    stmt_sub.setString(2, usn);
+                    stmt_sub.setString(3, rs_course.getString("c_id"));
+                    int rowsAffected = stmt_sub.executeUpdate(); 
+
+                    if (rowsAffected > 0) {
+                        JOptionPane.showMessageDialog(this, "Marks Updated Successfully");
+                    } else {
+                        JOptionPane.showMessageDialog(this, "No records were updated");
+                    }
+                }
+
+            } catch(Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error Updating Marks");
+                ex.printStackTrace();
+            }
         });
         form.add(submit);
     }
 
-    private void updateAttendanceForm(JPanel form) {
+    private void updateAttendanceForm(JPanel form,String teacherId) {
         form.add(new JLabel("USN:"));
         JComboBox<String> usnDropdown = new JComboBox<>();
         
         try {
             Connection conn = DBMS.getConnection();
-            PreparedStatement stmt = conn.prepareStatement("SELECT DISTINCT usn FROM student");
+
+            PreparedStatement section = conn.prepareStatement("SELECT section FROM teacher where teacher_id = ?");
+            section.setString(1, teacherId);
+            ResultSet rs_sec = section.executeQuery();
+            rs_sec.next();
+
+            PreparedStatement stmt = conn.prepareStatement("SELECT DISTINCT usn FROM student where section = ?");
+            stmt.setString(1, rs_sec.getString("section"));
             ResultSet rs = stmt.executeQuery();
             
             while (rs.next()) {
@@ -291,7 +338,35 @@ class TeacherPortal extends JFrame {
         JButton submit = new JButton("Update Attendance");
         submit.addActionListener(e -> {
             // Add database connection code here
-            JOptionPane.showMessageDialog(this, "Attendance Updated Successfully");
+            try{
+                Connection conn = DBMS.getConnection();
+
+                //get attendance
+                double attendance = Double.parseDouble(attendanceField.getText());
+                String usn = (String) usnDropdown.getSelectedItem();
+                
+                PreparedStatement course = conn.prepareStatement("SELECT c_id FROM teacher where teacher_id = ?");
+                course.setString(1, teacherId);
+                ResultSet rs_course = course.executeQuery();
+                rs_course.next();
+
+                PreparedStatement smt_attendance = conn.prepareStatement("UPDATE student_takes_course SET attendance = ? where usn = ? and c_id = ?");
+                smt_attendance.setDouble(1, attendance);
+                smt_attendance.setString(2, usn);
+                smt_attendance.setString(3, rs_course.getString("c_id"));
+                int rowsAffected = smt_attendance.executeUpdate(); 
+
+                if (rowsAffected > 0) {
+                    JOptionPane.showMessageDialog(this, "Attendance Updated Successfully");
+                } else {
+                    JOptionPane.showMessageDialog(this, "No records were updated");
+                }
+
+                JOptionPane.showMessageDialog(this, "Attendance Updated Successfully");
+            } catch(Exception ex ){
+                JOptionPane.showMessageDialog(this, "Error Updating Attendance");
+                ex.printStackTrace();
+            }
         });
         form.add(submit);
     }
@@ -378,8 +453,8 @@ class StudentPortal extends JFrame {
             while(rs.next()) {
                 String subject = rs.getString("c_name");
                 String cie1 = rs.getString("CIE1");
-                String cie2 = rs.getString("CIE1");
-                String cie3 = rs.getString("CIE1");
+                String cie2 = rs.getString("CIE2");
+                String cie3 = rs.getString("CIE3");
                 String end_sem = rs.getString("end_sem");
                 String attendance = rs.getString("attendance");
                 String next_exam = rs.getString("next_exam_date");
