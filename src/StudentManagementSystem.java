@@ -7,8 +7,8 @@ import java.sql.*;
 //done
 class DBMS {
     private static final String URL = "jdbc:mysql://localhost:3306/java_project";
-    private static final String USER = "root";
-    private static final String PASSWORD = "Batman12";
+    private static final String USER = "<enter username>";
+    private static final String PASSWORD = "<enter password>";
 
     public static Connection getConnection() throws SQLException {
         return DriverManager.getConnection(URL, USER, PASSWORD);
