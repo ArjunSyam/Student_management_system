@@ -139,9 +139,27 @@ interface Logout {
     }
 }
 
-class AdminLoginPage extends LoginPage {
+class AdminDetails {
     private static final String ADMIN_USERNAME = "admin";
     private static final String ADMIN_PASSWORD = "password";
+
+    //Getter
+    public String getUser() {
+        return ADMIN_USERNAME;
+    }
+
+    //Getter
+    public String getPassword() {
+        return ADMIN_PASSWORD;
+    }
+}
+
+//Admin login Page
+//done i think
+class AdminLoginPage extends LoginPage {
+    AdminDetails AD = new AdminDetails();
+    private final String ADMIN_USERNAME = AD.getUser();
+    private final String ADMIN_PASSWORD = AD.getPassword();
 
     public AdminLoginPage() {
         super("Admin Login");
@@ -164,6 +182,7 @@ class AdminLoginPage extends LoginPage {
 }
 
 // Admin Portal
+// done
 class AdminPortal extends JFrame implements Logout {
     private JPanel inputPanel;
     private CardLayout cardLayout;
@@ -346,7 +365,7 @@ class AdminPortal extends JFrame implements Logout {
                 stmt.setString(4, branchField.getText().trim());
                 stmt.setString(5, (String) semesterBox.getSelectedItem());
                 stmt.setString(6, (String) sectionBox.getSelectedItem());
-                stmt.setString(4, yearField.getText().trim());
+                stmt.setString(7, yearField.getText().trim());
 
                 int result = stmt.executeUpdate();
                 if (result > 0) {
@@ -378,6 +397,7 @@ class AdminPortal extends JFrame implements Logout {
 }
 
 // Teacher Portal
+//done
 class TeacherPortal extends JFrame implements Logout {
     private JPanel inputPanel;
     private DefaultTableModel tableModel;
@@ -602,12 +622,6 @@ class TeacherPortal extends JFrame implements Logout {
         form.add(submit);
     }
 
-    private void updateTable() {
-        tableModel.setRowCount(0);
-        // Add database query code here to populate table based on semester and section
-        // For now, adding sample data
-        tableModel.addRow(new Object[]{"1BM20CS001", "John Doe", "A", "CSE", "4"});
-    }
 }
 
 // Student Portal
